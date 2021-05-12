@@ -39,7 +39,6 @@ class MyStreamListener(tweepy.StreamListener):
         # specific
         phrase = re.sub(r"won\'t", "will not", phrase)
         phrase = re.sub(r"can\'t", "can not", phrase)
-
         phrase = re.sub(r"won’t", "will not", phrase)
         phrase = re.sub(r"can’t", "can not", phrase)
 
