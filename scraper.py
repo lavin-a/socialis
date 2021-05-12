@@ -18,6 +18,9 @@ import credentials  # Import api/access_token keys from credentials.py
 import settings
 import datetime
 import time
+import ssl
+import requests
+import urllib3
 
 
 class MyStreamListener(tweepy.StreamListener):
@@ -198,14 +201,21 @@ class MyStreamListener(tweepy.StreamListener):
             # return False to disconnect the stream
             return True
 
-
-def stream():
+def connect():
     auth = tweepy.OAuthHandler(credentials.consumer_key, credentials.consumer_secret)
     auth.set_access_token(credentials.access_token, credentials.access_token_secret)
-    api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
+    api = tweepy.API(auth, wait_on_rate_limit=True)
 
     myStreamListener = MyStreamListener(status_queue)
     myStream = tweepy.Stream(auth=api.auth, listener=myStreamListener, tweet_mode='extended')
+    try:
+        myStream.filter(languages=["en"], track=settings.TRACK_WORDS)
+    except (requests.ConnectionError, requests.Timeout, ssl.SSLError, urllib3.exceptions.ReadTimeoutError, urllib3.exceptions.ProtocolError) as exc:
+        print("Error. Restarting Stream.... Error: ")
+        print(exc)
+        connect()
+
+def stream():
     myconn = psycopg2.connect(host = credentials.host,
                               port = credentials.port,
                               user = credentials.user,
@@ -226,12 +236,8 @@ def stream():
         myconn.commit()
     cur.close()
 
-    try:
-        myStream.filter(languages=["en"], track=settings.TRACK_WORDS)
-    except Exception as e:
-        print("Error. Restarting Stream.... Error: ")
-        print(e.__doc__)
-        print(e)
+    connect()
+
     myconn.close()
 
 
